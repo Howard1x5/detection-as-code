@@ -1,0 +1,41 @@
+title: Suspicious PowerShell Web Download
+id: 8d7e9c2f-1a3b-4c5d-6e7f-890123456789
+status: experimental
+description: Detects PowerShell commands downloading files from the internet, commonly used in malware delivery
+author: Detection Pipeline Project
+date: 2026/02/04
+references:
+    - https://attack.mitre.org/techniques/T1059/001/
+    - https://attack.mitre.org/techniques/T1105/
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_powershell:
+        - Image|endswith:
+            - '\powershell.exe'
+            - '\pwsh.exe'
+        - OriginalFileName:
+            - 'PowerShell.EXE'
+            - 'pwsh.dll'
+    selection_download:
+        CommandLine|contains:
+            - 'Invoke-WebRequest'
+            - 'iwr '
+            - 'wget '
+            - 'curl '
+            - 'Net.WebClient'
+            - 'DownloadFile'
+            - 'DownloadString'
+            - 'BitsTransfer'
+            - 'Start-BitsTransfer'
+    condition: selection_powershell and selection_download
+falsepositives:
+    - Legitimate administrative scripts
+    - Software updates
+level: medium
+tags:
+    - attack.execution
+    - attack.t1059.001
+    - attack.command_and_control
+    - attack.t1105

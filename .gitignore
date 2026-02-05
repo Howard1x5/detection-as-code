@@ -1,0 +1,38 @@
+# Credentials and secrets
+*credentials*
+*.env
+.env.*
+secrets/
+*.key
+*.pem
+
+# Malware samples (keep metadata only)
+samples/*.exe
+samples/*.dll
+samples/*.zip
+samples/*.bin
+*.malware
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Logs
+*.log
+logs/
+
+# Temp files
+*.tmp
+*.bak
