@@ -83,10 +83,10 @@
   <!-- ============================================ -->
 
   <!-- AsyncRAT System Process Masquerading - svchost -->
+  <!-- Note: Uses negative lookahead to match svchost NOT in System32/SysWOW64 -->
   <rule id="100120" level="15">
     <if_sid>61603</if_sid>
-    <field name="win.eventdata.image" type="pcre2">(?i)\\svchost\.exe$</field>
-    <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)^C:\\Windows\\(System32|SysWOW64)\\</field>
+    <field name="win.eventdata.image" type="pcre2">(?i)^(?!C:\\Windows\\(System32|SysWOW64)\\).*\\svchost\.exe$</field>
     <description>AsyncRAT: svchost.exe executing from non-system directory (masquerading)</description>
     <mitre>
       <id>T1036.005</id>
@@ -95,10 +95,10 @@
   </rule>
 
   <!-- AsyncRAT System Process Masquerading - csrss -->
+  <!-- Note: Uses negative lookahead to match csrss NOT in System32 -->
   <rule id="100121" level="15">
     <if_sid>61603</if_sid>
-    <field name="win.eventdata.image" type="pcre2">(?i)\\csrss\.exe$</field>
-    <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)^C:\\Windows\\System32\\</field>
+    <field name="win.eventdata.image" type="pcre2">(?i)^(?!C:\\Windows\\System32\\).*\\csrss\.exe$</field>
     <description>AsyncRAT: csrss.exe executing from non-system directory (masquerading)</description>
     <mitre>
       <id>T1036.005</id>
@@ -107,10 +107,10 @@
   </rule>
 
   <!-- AsyncRAT System Process Masquerading - explorer -->
+  <!-- Note: Uses negative lookahead to match explorer NOT in Windows -->
   <rule id="100122" level="15">
     <if_sid>61603</if_sid>
-    <field name="win.eventdata.image" type="pcre2">(?i)\\explorer\.exe$</field>
-    <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)^C:\\Windows\\</field>
+    <field name="win.eventdata.image" type="pcre2">(?i)^(?!C:\\Windows\\).*\\explorer\.exe$</field>
     <description>AsyncRAT: explorer.exe executing from non-Windows directory (masquerading)</description>
     <mitre>
       <id>T1036.005</id>
