@@ -1,0 +1,176 @@
+title: AsyncRAT C2 Communication - Default Ports
+id: c1d2e3f4-5678-90ab-cdef-888888888888
+status: experimental
+description: |
+    Detects potential AsyncRAT C2 communication on default ports.
+    AsyncRAT commonly uses ports 6606, 7707, 8808, and 4449 for
+    command and control traffic.
+author: Clint Howard
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1571/
+    - https://attack.mitre.org/techniques/T1071/001/
+tags:
+    - attack.command_and_control
+    - attack.t1571
+    - attack.t1071.001
+logsource:
+    category: network_connection
+    product: windows
+detection:
+    selection_ports:
+        DestinationPort:
+            - 6606
+            - 7707
+            - 8808
+            - 4449
+    selection_initiated:
+        Initiated: 'true'
+    filter_local:
+        DestinationIp|startswith:
+            - '127.'
+            - '10.'
+            - '192.168.'
+            - '172.16.'
+            - '172.17.'
+            - '172.18.'
+            - '172.19.'
+            - '172.20.'
+            - '172.21.'
+            - '172.22.'
+            - '172.23.'
+            - '172.24.'
+            - '172.25.'
+            - '172.26.'
+            - '172.27.'
+            - '172.28.'
+            - '172.29.'
+            - '172.30.'
+            - '172.31.'
+    condition: selection_ports and selection_initiated and not filter_local
+falsepositives:
+    - Custom applications using these ports
+    - Development environments
+level: high
+---
+title: AsyncRAT C2 Communication - Suspicious Process Network Activity
+id: c1d2e3f4-5678-90ab-cdef-999999999999
+status: experimental
+description: |
+    Detects network connections from processes running in suspicious
+    locations, matching AsyncRAT C2 behavior patterns.
+author: Clint Howard
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1071/001/
+tags:
+    - attack.command_and_control
+    - attack.t1071.001
+logsource:
+    category: network_connection
+    product: windows
+detection:
+    selection_process_path:
+        Image|contains:
+            - '\AppData\Roaming\'
+            - '\AppData\Local\Temp\'
+            - '\Users\Public\'
+            - '\ProgramData\'
+    selection_outbound:
+        Initiated: 'true'
+    filter_browsers:
+        Image|endswith:
+            - '\chrome.exe'
+            - '\firefox.exe'
+            - '\msedge.exe'
+            - '\brave.exe'
+    filter_updaters:
+        Image|endswith:
+            - '\GoogleUpdate.exe'
+            - '\MicrosoftEdgeUpdate.exe'
+    condition: selection_process_path and selection_outbound and not filter_browsers and not filter_updaters
+falsepositives:
+    - Portable applications with network connectivity
+    - User-installed applications in AppData
+level: medium
+---
+title: AsyncRAT Encrypted C2 Traffic Pattern
+id: c1d2e3f4-5678-90ab-cdef-aaaaaaaaaaaa
+status: experimental
+description: |
+    Detects TLS/SSL connections to external hosts from suspicious processes,
+    matching AsyncRAT's encrypted C2 communication pattern.
+author: Clint Howard
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1573/001/
+tags:
+    - attack.command_and_control
+    - attack.t1573.001
+logsource:
+    category: network_connection
+    product: windows
+detection:
+    selection_ssl_ports:
+        DestinationPort:
+            - 443
+            - 8443
+            - 4443
+    selection_suspicious_process:
+        Image|contains:
+            - '\AppData\'
+            - '\Users\Public\'
+            - '\Temp\'
+        Image|endswith:
+            - '.exe'
+    selection_initiated:
+        Initiated: 'true'
+    filter_browsers:
+        Image|endswith:
+            - '\chrome.exe'
+            - '\firefox.exe'
+            - '\msedge.exe'
+    filter_system:
+        Image|startswith:
+            - 'C:\Windows\'
+            - 'C:\Program Files\'
+    condition: selection_ssl_ports and selection_suspicious_process and selection_initiated and not filter_browsers and not filter_system
+falsepositives:
+    - Legitimate applications in user directories making HTTPS connections
+level: medium
+---
+title: AsyncRAT DNS Query for Dynamic DNS Provider
+id: c1d2e3f4-5678-90ab-cdef-bbbbbbbbbbbb
+status: experimental
+description: |
+    Detects DNS queries to dynamic DNS providers commonly used by AsyncRAT
+    for C2 infrastructure. Threat actors often use DDNS to maintain
+    persistent C2 access with changing IP addresses.
+author: Clint Howard
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1568/002/
+tags:
+    - attack.command_and_control
+    - attack.t1568.002
+logsource:
+    category: dns_query
+    product: windows
+detection:
+    selection_ddns:
+        QueryName|endswith:
+            - '.duckdns.org'
+            - '.no-ip.org'
+            - '.no-ip.com'
+            - '.no-ip.biz'
+            - '.ddns.net'
+            - '.hopto.org'
+            - '.zapto.org'
+            - '.sytes.net'
+            - '.serveftp.com'
+            - '.portmap.io'
+    condition: selection_ddns
+falsepositives:
+    - Legitimate use of dynamic DNS for home networks or small businesses
+    - IoT devices using DDNS
+level: medium

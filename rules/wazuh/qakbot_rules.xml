@@ -1,0 +1,85 @@
+<!-- QakBot Detection Rules -->
+<!-- Banking trojan/loader known for HTML smuggling and regsvr32 execution -->
+<!-- MITRE ATT&CK: T1218.010, T1055, T1016, T1057 -->
+
+<group name="qakbot,malware,loader,">
+
+  <!-- QakBot: Regsvr32 suspicious DLL execution -->
+  <rule id="100310" level="13">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)regsvr32\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(/s|-s|/i:|-i:)</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(\\Users\\|\\AppData\\|\\Downloads\\|\\Temp\\|\.dat|\.tmp|\.ocx)</field>
+    <mitre>
+      <id>T1218.010</id>
+    </mitre>
+    <group>qakbot,defense_evasion,</group>
+    <description>QakBot: Regsvr32 execution with suspicious DLL path</description>
+  </rule>
+
+  <!-- QakBot: Discovery command burst -->
+  <rule id="100311" level="10">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(whoami\s/all|net\slocalgroup|net\sgroup\s/domain|nltest\s/dclist|nltest\s/domain_trusts|cmdkey\s/list)</field>
+    <mitre>
+      <id>T1016</id>
+      <id>T1057</id>
+      <id>T1082</id>
+    </mitre>
+    <group>qakbot,discovery,</group>
+    <description>QakBot: Active Directory/domain discovery command</description>
+  </rule>
+
+  <!-- QakBot: Explorer spawning reconnaissance -->
+  <rule id="100312" level="10">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.parentImage" type="pcre2">(?i)explorer\.exe$</field>
+    <field name="win.eventdata.image" type="pcre2">(?i)(cmd|powershell|wscript|cscript|mshta)\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(whoami|net\sview|ipconfig|netstat|arp\s-a|route\sprint|net\suser|net\sgroup)</field>
+    <mitre>
+      <id>T1055</id>
+      <id>T1016</id>
+    </mitre>
+    <group>qakbot,discovery,defense_evasion,</group>
+    <description>QakBot: Reconnaissance commands from explorer (possible injection)</description>
+  </rule>
+
+  <!-- QakBot: Scheduled task with suspicious payload -->
+  <rule id="100313" level="12">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)schtasks\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)/create</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(regsvr32|rundll32|\\AppData\\|\\Users\\Public\\|\.dat|\.tmp)</field>
+    <mitre>
+      <id>T1053.005</id>
+    </mitre>
+    <group>qakbot,persistence,</group>
+    <description>QakBot: Scheduled task creation with suspicious payload</description>
+  </rule>
+
+  <!-- QakBot: Network connection from injected process -->
+  <rule id="100314" level="10">
+    <if_sid>61605</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)(explorer|svchost|regsvr32)\.exe$</field>
+    <field name="win.eventdata.destinationPort" type="pcre2">^(443|8443|995|465)$</field>
+    <field name="win.eventdata.destinationIp" negate="yes" type="pcre2">^(10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.|127\.)</field>
+    <mitre>
+      <id>T1071.001</id>
+    </mitre>
+    <group>qakbot,command_and_control,</group>
+    <description>QakBot: Suspicious outbound HTTPS from system process</description>
+  </rule>
+
+  <!-- QakBot: Esentutl abuse for credential access -->
+  <rule id="100315" level="12">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)esentutl\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(/y|copy)</field>
+    <mitre>
+      <id>T1003.003</id>
+    </mitre>
+    <group>qakbot,credential_access,</group>
+    <description>QakBot: Esentutl abuse for file copying</description>
+  </rule>
+
+</group>

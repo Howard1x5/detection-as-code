@@ -1,0 +1,104 @@
+<!-- LokiBot Detection Rules -->
+<!-- Information stealer targeting credentials and cryptocurrency wallets -->
+<!-- MITRE ATT&CK: T1555, T1539, T1041, T1547.001 -->
+
+<group name="lokibot,malware,stealer,">
+
+  <!-- LokiBot: Browser credential store access -->
+  <rule id="100510" level="12">
+    <if_sid>61601</if_sid>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)\\Google\\Chrome\\User\sData\\.*\\(Login\sData|Cookies|Web\sData)$</field>
+    <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)chrome\.exe$</field>
+    <mitre>
+      <id>T1555.003</id>
+    </mitre>
+    <group>lokibot,credential_access,</group>
+    <description>LokiBot: Chrome credential store access by non-browser process</description>
+  </rule>
+
+  <!-- LokiBot: Firefox credential access -->
+  <rule id="100511" level="12">
+    <if_sid>61601</if_sid>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)\\Mozilla\\Firefox\\Profiles\\.*\\(logins\.json|cookies\.sqlite|key4\.db)$</field>
+    <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)firefox\.exe$</field>
+    <mitre>
+      <id>T1555.003</id>
+    </mitre>
+    <group>lokibot,credential_access,</group>
+    <description>LokiBot: Firefox credential store access by non-browser process</description>
+  </rule>
+
+  <!-- LokiBot: Cryptocurrency wallet access -->
+  <rule id="100512" level="14">
+    <if_sid>61601</if_sid>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)(\\Electrum\\wallets\\|\\Ethereum\\keystore\\|\\Bitcoin\\wallets\\|wallet\.dat)</field>
+    <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)(electrum|bitcoin|ethereum|exodus)\.exe$</field>
+    <mitre>
+      <id>T1539</id>
+    </mitre>
+    <group>lokibot,credential_access,</group>
+    <description>LokiBot: Cryptocurrency wallet file access</description>
+  </rule>
+
+  <!-- LokiBot: FTP client credential theft -->
+  <rule id="100513" level="11">
+    <if_sid>61601</if_sid>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)(\\FileZilla\\(recentservers|sitemanager)\.xml|\\WinSCP\\WinSCP\.ini|\\CoreFTP\\)</field>
+    <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)(filezilla|winscp|coreftp)\.exe$</field>
+    <mitre>
+      <id>T1555</id>
+    </mitre>
+    <group>lokibot,credential_access,</group>
+    <description>LokiBot: FTP client credential file access</description>
+  </rule>
+
+  <!-- LokiBot: Email client credential theft -->
+  <rule id="100514" level="11">
+    <if_sid>61601</if_sid>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)(\\Thunderbird\\Profiles\\|\\Microsoft\\Outlook\\)</field>
+    <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)(thunderbird|outlook)\.exe$</field>
+    <mitre>
+      <id>T1555.003</id>
+    </mitre>
+    <group>lokibot,credential_access,</group>
+    <description>LokiBot: Email client credential access</description>
+  </rule>
+
+  <!-- LokiBot: Registry persistence -->
+  <rule id="100515" level="10">
+    <if_sid>61615</if_sid>
+    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\CurrentVersion\\Run</field>
+    <field name="win.eventdata.details" type="pcre2">(?i)\\AppData\\Roaming\\Microsoft\\.*\.exe$</field>
+    <mitre>
+      <id>T1547.001</id>
+    </mitre>
+    <group>lokibot,persistence,</group>
+    <description>LokiBot: Registry persistence in hidden AppData location</description>
+  </rule>
+
+  <!-- LokiBot: HTTP POST exfiltration pattern -->
+  <rule id="100516" level="10">
+    <if_sid>61605</if_sid>
+    <field name="win.eventdata.destinationPort" type="pcre2">^(80|443|8080)$</field>
+    <field name="win.eventdata.image" type="pcre2">(?i)(svchost|explorer|regasm)\.exe$</field>
+    <field name="win.eventdata.destinationIp" negate="yes" type="pcre2">(?i)(microsoft|windows|windowsupdate)</field>
+    <mitre>
+      <id>T1041</id>
+    </mitre>
+    <group>lokibot,exfiltration,</group>
+    <description>LokiBot: Possible HTTP exfiltration from system process</description>
+  </rule>
+
+  <!-- LokiBot: Steam credentials theft -->
+  <rule id="100517" level="10">
+    <if_sid>61601</if_sid>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)\\Steam\\config\\(loginusers\.vdf|config\.vdf)</field>
+    <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)steam\.exe$</field>
+    <mitre>
+      <id>T1555</id>
+    </mitre>
+    <group>lokibot,credential_access,</group>
+    <description>LokiBot: Steam configuration/credential access</description>
+  </rule>
+
+</group>

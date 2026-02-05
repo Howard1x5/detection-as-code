@@ -1,0 +1,303 @@
+title: Chrysalis Backdoor DLL Sideloading via BluetoothService
+id: c1001001-0001-4000-8000-000000000001
+status: experimental
+description: Detects Chrysalis backdoor DLL sideloading using BluetoothService.exe loading log.dll
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/
+    - https://attack.mitre.org/techniques/T1574/002/
+tags:
+    - attack.persistence
+    - attack.defense_evasion
+    - attack.t1574.002
+    - apt.lotus_blossom
+logsource:
+    product: windows
+    category: image_load
+detection:
+    selection:
+        Image|endswith: '\BluetoothService.exe'
+        ImageLoaded|endswith: '\log.dll'
+    filter_legitimate:
+        Image|startswith:
+            - 'C:\Windows\'
+            - 'C:\Program Files\'
+    condition: selection and not filter_legitimate
+falsepositives:
+    - Legitimate Bluetooth software (rare)
+level: critical
+
+---
+title: Chrysalis Hidden Directory Creation in AppData
+id: c1001001-0002-4000-8000-000000000002
+status: experimental
+description: Detects creation of hidden Bluetooth directory in AppData used by Chrysalis
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/
+tags:
+    - attack.defense_evasion
+    - attack.t1564.001
+    - apt.lotus_blossom
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection_mkdir:
+        Image|endswith:
+            - '\cmd.exe'
+            - '\powershell.exe'
+        CommandLine|contains|all:
+            - 'mkdir'
+            - '\AppData\'
+            - 'Bluetooth'
+    selection_attrib:
+        Image|endswith: '\attrib.exe'
+        CommandLine|contains:
+            - '+h'
+            - '\Bluetooth'
+    condition: selection_mkdir or selection_attrib
+falsepositives:
+    - Legitimate Bluetooth software installation
+level: high
+
+---
+title: Chrysalis TCC Code Execution Pattern
+id: c1001001-0003-4000-8000-000000000003
+status: experimental
+description: Detects Chrysalis using TCC (Tiny C Compiler) for runtime code execution
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/
+    - https://attack.mitre.org/techniques/T1620/
+tags:
+    - attack.execution
+    - attack.defense_evasion
+    - attack.t1620
+    - attack.t1059
+    - apt.lotus_blossom
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection:
+        CommandLine|contains|all:
+            - '-nostdlib'
+            - '-run'
+            - '.c'
+    selection_path:
+        CommandLine|contains:
+            - '\ProgramData\USOShared\'
+            - 'conf.c'
+            - 'libtcc'
+    condition: selection or selection_path
+falsepositives:
+    - Legitimate TCC compiler usage (very rare in enterprise)
+level: critical
+
+---
+title: Chrysalis C2 Domain Communication
+id: c1001001-0004-4000-8000-000000000004
+status: experimental
+description: Detects network connections to known Chrysalis/Lotus Blossom C2 infrastructure
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/
+tags:
+    - attack.command_and_control
+    - attack.t1071.001
+    - apt.lotus_blossom
+logsource:
+    product: windows
+    category: network_connection
+detection:
+    selection_domains:
+        DestinationHostname|endswith:
+            - 'skycloudcenter.com'
+            - 'wiresguard.com'
+    selection_ips:
+        DestinationIp:
+            - '95.179.213.0'
+            - '61.4.102.97'
+            - '59.110.7.32'
+            - '124.222.137.114'
+    condition: selection_domains or selection_ips
+falsepositives:
+    - None expected
+level: critical
+
+---
+title: Chrysalis Notepad++ Infection Chain
+id: c1001001-0005-4000-8000-000000000005
+status: experimental
+description: Detects Chrysalis initial access chain via Notepad++ update mechanism
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/
+tags:
+    - attack.initial_access
+    - attack.execution
+    - attack.t1204.002
+    - apt.lotus_blossom
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection_chain:
+        ParentImage|endswith: '\notepad++.exe'
+        Image|endswith: '\GUP.exe'
+    selection_download:
+        ParentImage|endswith: '\GUP.exe'
+        Image|endswith: '\update.exe'
+    condition: selection_chain or selection_download
+falsepositives:
+    - Legitimate Notepad++ updates (verify hash)
+level: high
+
+---
+title: Chrysalis Service Installation with -i Flag
+id: c1001001-0006-4000-8000-000000000006
+status: experimental
+description: Detects Chrysalis persistence via service installation with characteristic -i flag
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/
+tags:
+    - attack.persistence
+    - attack.t1543.003
+    - apt.lotus_blossom
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection_sc:
+        Image|endswith: '\sc.exe'
+        CommandLine|contains:
+            - 'create'
+            - 'binPath='
+    selection_flag:
+        CommandLine|contains:
+            - ' -i'
+            - 'BluetoothService'
+    condition: selection_sc and selection_flag
+falsepositives:
+    - Legitimate service installations
+level: high
+
+---
+title: Chrysalis Mutex Creation
+id: c1001001-0007-4000-8000-000000000007
+status: experimental
+description: Detects Chrysalis backdoor mutex creation pattern
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/
+tags:
+    - attack.execution
+    - attack.t1106
+    - apt.lotus_blossom
+logsource:
+    product: windows
+    category: create_mutex
+detection:
+    selection:
+        EventType: CreateMutex
+        TargetObject|contains:
+            - 'Jdhfv_1.0.1'
+            - 'Global\\Jdhfv'
+    condition: selection
+falsepositives:
+    - None expected
+level: critical
+
+---
+title: Chrysalis USOShared Directory Abuse
+id: c1001001-0008-4000-8000-000000000008
+status: experimental
+description: Detects abuse of ProgramData\USOShared directory for Chrysalis staging
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/
+tags:
+    - attack.defense_evasion
+    - attack.t1036
+    - apt.lotus_blossom
+logsource:
+    product: windows
+    category: file_event
+detection:
+    selection:
+        TargetFilename|contains: '\ProgramData\USOShared\'
+        TargetFilename|endswith:
+            - 'svchost.exe'
+            - 'conf.c'
+            - 'libtcc.dll'
+    condition: selection
+falsepositives:
+    - Windows Update Orchestrator (legitimate svchost in different path)
+level: high
+
+---
+title: Chrysalis Cleanup Batch File Execution
+id: c1001001-0009-4000-8000-000000000009
+status: experimental
+description: Detects Chrysalis cleanup batch file (u.bat) execution
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/
+tags:
+    - attack.defense_evasion
+    - attack.t1070.004
+    - apt.lotus_blossom
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection:
+        Image|endswith: '\cmd.exe'
+        CommandLine|contains:
+            - 'u.bat'
+            - '\Bluetooth\u.bat'
+    condition: selection
+falsepositives:
+    - Batch files named u.bat for other purposes
+level: medium
+
+---
+title: Chrysalis Warbird Execution via clipc.dll
+id: c1001001-0010-4000-8000-000000000010
+status: experimental
+description: Detects Chrysalis loader using Microsoft signed clipc.dll for code execution
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://www.rapid7.com/blog/post/tr-chrysalis-backdoor-dive-into-lotus-blossoms-toolkit/
+tags:
+    - attack.defense_evasion
+    - attack.execution
+    - attack.t1055
+    - attack.t1620
+    - apt.lotus_blossom
+logsource:
+    product: windows
+    category: image_load
+detection:
+    selection:
+        ImageLoaded|endswith: '\clipc.dll'
+    filter_legitimate:
+        Image|startswith:
+            - 'C:\Windows\System32\'
+            - 'C:\Windows\SysWOW64\'
+    condition: selection and not filter_legitimate
+falsepositives:
+    - Legitimate Microsoft licensing components
+level: high

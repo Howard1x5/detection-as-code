@@ -1,0 +1,151 @@
+title: AsyncRAT Process Hollowing - Suspicious Parent-Child
+id: b1c2d3e4-5678-90ab-cdef-444444444444
+status: experimental
+description: |
+    Detects suspicious parent-child process relationships indicative of
+    AsyncRAT process hollowing. AsyncRAT may spawn legitimate Windows
+    processes and inject malicious code into them.
+author: Clint Howard
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1055/012/
+    - https://malpedia.caad.fkie.fraunhofer.de/details/win.asyncrat
+tags:
+    - attack.defense_evasion
+    - attack.t1055.012
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_child:
+        Image|endswith:
+            - '\RegAsm.exe'
+            - '\InstallUtil.exe'
+            - '\MSBuild.exe'
+            - '\RegSvcs.exe'
+            - '\vbc.exe'
+            - '\csc.exe'
+    selection_parent_suspicious:
+        ParentImage|contains:
+            - '\AppData\'
+            - '\Users\Public\'
+            - '\Temp\'
+            - '\Downloads\'
+    condition: selection_child and selection_parent_suspicious
+falsepositives:
+    - Developers compiling code from user directories
+    - Legitimate .NET applications self-updating
+level: high
+---
+title: AsyncRAT Suspicious .NET Assembly Loading
+id: b1c2d3e4-5678-90ab-cdef-555555555555
+status: experimental
+description: |
+    Detects AsyncRAT executing .NET assemblies from suspicious locations.
+    AsyncRAT payloads are .NET-based and may be loaded via Assembly.Load
+    or executed from non-standard directories.
+author: Clint Howard
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1055/
+tags:
+    - attack.defense_evasion
+    - attack.execution
+    - attack.t1055
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_dotnet:
+        Image|endswith:
+            - '\powershell.exe'
+            - '\pwsh.exe'
+    selection_assembly:
+        CommandLine|contains:
+            - 'Assembly.Load'
+            - '[Reflection.Assembly]::Load'
+            - 'Invoke-Expression'
+            - 'IEX'
+    selection_bypass:
+        CommandLine|contains:
+            - '-ep bypass'
+            - '-exec bypass'
+            - '-executionpolicy bypass'
+            - '-nop'
+    condition: selection_dotnet and (selection_assembly or selection_bypass)
+falsepositives:
+    - Administrative PowerShell scripts
+    - Legitimate software deployment tools
+level: medium
+---
+title: AsyncRAT Suspicious Process Execution from User Directory
+id: b1c2d3e4-5678-90ab-cdef-666666666666
+status: experimental
+description: |
+    Detects execution of processes from user-writable directories with
+    suspicious characteristics matching AsyncRAT behavior patterns.
+    AsyncRAT often masquerades as legitimate Windows processes.
+author: Clint Howard
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1036/005/
+tags:
+    - attack.defense_evasion
+    - attack.t1036.005
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_suspicious_name:
+        Image|endswith:
+            - '\svchost.exe'
+            - '\explorer.exe'
+            - '\csrss.exe'
+            - '\lsass.exe'
+            - '\services.exe'
+            - '\RuntimeBroker.exe'
+    filter_legitimate_path:
+        Image|startswith:
+            - 'C:\Windows\System32\'
+            - 'C:\Windows\SysWOW64\'
+    condition: selection_suspicious_name and not filter_legitimate_path
+falsepositives:
+    - Very unlikely - system processes should only run from System32/SysWOW64
+level: critical
+---
+title: AsyncRAT Keylogger Activity Detection
+id: b1c2d3e4-5678-90ab-cdef-777777777777
+status: experimental
+description: |
+    Detects potential AsyncRAT keylogger activity via API calls or
+    file creation patterns associated with captured keystrokes.
+author: Clint Howard
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1056/001/
+tags:
+    - attack.collection
+    - attack.credential_access
+    - attack.t1056.001
+logsource:
+    category: file_event
+    product: windows
+detection:
+    selection_file:
+        TargetFilename|contains:
+            - '\AppData\Roaming\'
+            - '\AppData\Local\Temp\'
+        TargetFilename|endswith:
+            - '\log.txt'
+            - '\keylog.txt'
+            - '\keys.log'
+            - '\typed.txt'
+    selection_suspicious_process:
+        Image|contains:
+            - '\AppData\'
+            - '\Users\Public\'
+            - '\Temp\'
+    condition: selection_file and selection_suspicious_process
+falsepositives:
+    - Legitimate logging applications
+level: high

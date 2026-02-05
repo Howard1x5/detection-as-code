@@ -1,0 +1,237 @@
+<!--
+  AsyncRAT Detection Rules for Wazuh
+  Author: Clint Howard
+  Date: 2026-02-05
+
+  These rules detect AsyncRAT/VenomRAT behavioral patterns from Windows
+  Sysmon logs collected via Wazuh agents.
+
+  Prerequisites:
+  - Sysmon installed on Windows endpoints
+  - Wazuh agent configured to collect Sysmon logs
+
+  Parent Rule References:
+  - 61603: Sysmon Event ID 1 (Process Creation)
+  - 61605: Sysmon Event ID 3 (Network Connection)
+  - 61615: Sysmon Event ID 13 (Registry SetValue)
+
+  Rule ID Range: 100100-100199 (Custom AsyncRAT rules)
+-->
+
+<group name="asyncrat,malware,rat,">
+
+  <!-- ============================================ -->
+  <!-- PERSISTENCE DETECTION - Registry Run Keys    -->
+  <!-- MITRE: T1547.001                            -->
+  <!-- ============================================ -->
+
+  <!-- AsyncRAT Registry Persistence - Suspicious Path -->
+  <rule id="100100" level="12">
+    <if_sid>61615</if_sid>
+    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\Software\\Microsoft\\Windows\\CurrentVersion\\Run</field>
+    <field name="win.eventdata.details" type="pcre2">(?i)(\\AppData\\|\\Users\\Public\\|\\ProgramData\\|\\Windows\\Temp\\)</field>
+    <description>AsyncRAT: Registry Run key persistence pointing to suspicious directory</description>
+    <mitre>
+      <id>T1547.001</id>
+    </mitre>
+    <group>persistence,asyncrat,registry,</group>
+  </rule>
+
+  <!-- AsyncRAT Registry Persistence - Specific Naming Pattern -->
+  <rule id="100101" level="14">
+    <if_sid>61615</if_sid>
+    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\CurrentVersion\\Run\\(Updater|SystemUpdate|WindowsService|svchost|RuntimeBroker|SecurityHealth)$</field>
+    <description>AsyncRAT: Registry persistence with suspicious value name matching RAT patterns</description>
+    <mitre>
+      <id>T1547.001</id>
+    </mitre>
+    <group>persistence,asyncrat,registry,critical,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- PERSISTENCE DETECTION - Scheduled Tasks      -->
+  <!-- MITRE: T1053.005                            -->
+  <!-- ============================================ -->
+
+  <!-- AsyncRAT Scheduled Task Creation -->
+  <rule id="100110" level="12">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\schtasks\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)/create</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(onlogon|onstart)</field>
+    <description>AsyncRAT: Scheduled task created with logon/startup trigger</description>
+    <mitre>
+      <id>T1053.005</id>
+    </mitre>
+    <group>persistence,asyncrat,schtasks,</group>
+  </rule>
+
+  <!-- AsyncRAT Scheduled Task with Suspicious Path -->
+  <rule id="100111" level="14">
+    <if_sid>100110</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(\\AppData\\|\\Users\\Public\\|\\Temp\\)</field>
+    <description>AsyncRAT: Scheduled task persistence targeting suspicious directory</description>
+    <mitre>
+      <id>T1053.005</id>
+    </mitre>
+    <group>persistence,asyncrat,schtasks,critical,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- DEFENSE EVASION - Process Masquerading       -->
+  <!-- MITRE: T1036.005                            -->
+  <!-- ============================================ -->
+
+  <!-- AsyncRAT System Process Masquerading - svchost -->
+  <rule id="100120" level="15">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\svchost\.exe$</field>
+    <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)^C:\\Windows\\(System32|SysWOW64)\\</field>
+    <description>AsyncRAT: svchost.exe executing from non-system directory (masquerading)</description>
+    <mitre>
+      <id>T1036.005</id>
+    </mitre>
+    <group>defense_evasion,asyncrat,masquerading,critical,</group>
+  </rule>
+
+  <!-- AsyncRAT System Process Masquerading - csrss -->
+  <rule id="100121" level="15">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\csrss\.exe$</field>
+    <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)^C:\\Windows\\System32\\</field>
+    <description>AsyncRAT: csrss.exe executing from non-system directory (masquerading)</description>
+    <mitre>
+      <id>T1036.005</id>
+    </mitre>
+    <group>defense_evasion,asyncrat,masquerading,critical,</group>
+  </rule>
+
+  <!-- AsyncRAT System Process Masquerading - explorer -->
+  <rule id="100122" level="15">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\explorer\.exe$</field>
+    <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)^C:\\Windows\\</field>
+    <description>AsyncRAT: explorer.exe executing from non-Windows directory (masquerading)</description>
+    <mitre>
+      <id>T1036.005</id>
+    </mitre>
+    <group>defense_evasion,asyncrat,masquerading,critical,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- DEFENSE EVASION - Process Hollowing          -->
+  <!-- MITRE: T1055.012                            -->
+  <!-- ============================================ -->
+
+  <!-- AsyncRAT .NET Utility Spawned from Suspicious Path -->
+  <rule id="100130" level="12">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\(RegAsm|InstallUtil|MSBuild|RegSvcs)\.exe$</field>
+    <field name="win.eventdata.parentImage" type="pcre2">(?i)(\\AppData\\|\\Users\\Public\\|\\Temp\\|\\Downloads\\)</field>
+    <description>AsyncRAT: .NET utility spawned from suspicious parent (possible process hollowing)</description>
+    <mitre>
+      <id>T1055.012</id>
+    </mitre>
+    <group>defense_evasion,asyncrat,process_injection,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- EXECUTION - PowerShell Abuse                 -->
+  <!-- MITRE: T1059.001                            -->
+  <!-- ============================================ -->
+
+  <!-- AsyncRAT PowerShell Execution Policy Bypass -->
+  <rule id="100140" level="10">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\powershell\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(-ep\s+bypass|-exec\s*bypass|-executionpolicy\s+bypass)</field>
+    <description>AsyncRAT: PowerShell execution with bypass flag</description>
+    <mitre>
+      <id>T1059.001</id>
+    </mitre>
+    <group>execution,asyncrat,powershell,</group>
+  </rule>
+
+  <!-- AsyncRAT PowerShell with Hidden Window -->
+  <rule id="100141" level="12">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\powershell\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(-w\s+hidden|-windowstyle\s+hidden)</field>
+    <description>AsyncRAT: PowerShell execution with hidden window</description>
+    <mitre>
+      <id>T1059.001</id>
+      <id>T1564.003</id>
+    </mitre>
+    <group>execution,asyncrat,powershell,evasion,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- COMMAND AND CONTROL - Network Activity       -->
+  <!-- MITRE: T1571, T1071.001                     -->
+  <!-- ============================================ -->
+
+  <!-- AsyncRAT C2 Default Port 6606 -->
+  <rule id="100150" level="12">
+    <if_sid>61605</if_sid>
+    <field name="win.eventdata.destinationPort">^6606$</field>
+    <field name="win.eventdata.initiated">true</field>
+    <description>AsyncRAT: Outbound connection to default C2 port 6606</description>
+    <mitre>
+      <id>T1571</id>
+    </mitre>
+    <group>c2,asyncrat,network,</group>
+  </rule>
+
+  <!-- AsyncRAT C2 Default Port 7707 -->
+  <rule id="100151" level="12">
+    <if_sid>61605</if_sid>
+    <field name="win.eventdata.destinationPort">^7707$</field>
+    <field name="win.eventdata.initiated">true</field>
+    <description>AsyncRAT: Outbound connection to default C2 port 7707</description>
+    <mitre>
+      <id>T1571</id>
+    </mitre>
+    <group>c2,asyncrat,network,</group>
+  </rule>
+
+  <!-- AsyncRAT C2 Default Port 8808 -->
+  <rule id="100152" level="12">
+    <if_sid>61605</if_sid>
+    <field name="win.eventdata.destinationPort">^8808$</field>
+    <field name="win.eventdata.initiated">true</field>
+    <description>AsyncRAT: Outbound connection to default C2 port 8808</description>
+    <mitre>
+      <id>T1571</id>
+    </mitre>
+    <group>c2,asyncrat,network,</group>
+  </rule>
+
+  <!-- AsyncRAT Network from Suspicious Directory -->
+  <rule id="100155" level="10">
+    <if_sid>61605</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)(\\AppData\\Roaming\\|\\AppData\\Local\\Temp\\|\\Users\\Public\\)[^\\]+\.exe$</field>
+    <field name="win.eventdata.initiated">true</field>
+    <description>AsyncRAT: Network connection from process in suspicious user directory</description>
+    <mitre>
+      <id>T1071.001</id>
+    </mitre>
+    <group>c2,asyncrat,network,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- COLLECTION - Keylogging Indicators           -->
+  <!-- MITRE: T1056.001                            -->
+  <!-- ============================================ -->
+
+  <!-- AsyncRAT Potential Keylogger File Creation -->
+  <rule id="100170" level="12">
+    <if_sid>61615</if_sid>
+    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\(AppData|Temp)\\.*\\(log|keylog|keys|typed)\.txt$</field>
+    <description>AsyncRAT: Potential keylogger output file detected</description>
+    <mitre>
+      <id>T1056.001</id>
+    </mitre>
+    <group>collection,asyncrat,keylogger,</group>
+  </rule>
+
+</group>

@@ -1,0 +1,219 @@
+<!-- Chrysalis Backdoor / Lotus Blossom APT Detection Rules -->
+<!-- Source: Rapid7 Threat Intelligence Report (2025) -->
+<!-- MITRE ATT&CK: T1574.002, T1055, T1620, T1573, T1071.001, T1543.003 -->
+
+<group name="chrysalis,lotus_blossom,apt,malware,">
+
+  <!-- Chrysalis: DLL Sideloading via BluetoothService -->
+  <rule id="100600" level="15">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\BluetoothService\.exe$</field>
+    <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)^C:\\(Windows|Program Files)</field>
+    <mitre>
+      <id>T1574.002</id>
+    </mitre>
+    <group>chrysalis,defense_evasion,dll_sideload,critical,</group>
+    <description>Chrysalis: BluetoothService.exe executed from suspicious location (DLL sideloading)</description>
+  </rule>
+
+  <!-- Chrysalis: Hidden Bluetooth Directory in AppData -->
+  <rule id="100601" level="12">
+    <if_sid>61601</if_sid>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)\\AppData\\Roaming\\Bluetooth\\</field>
+    <mitre>
+      <id>T1564.001</id>
+    </mitre>
+    <group>chrysalis,defense_evasion,hidden_files,</group>
+    <description>Chrysalis: File created in hidden Bluetooth staging directory</description>
+  </rule>
+
+  <!-- Chrysalis: log.dll Sideload Component -->
+  <rule id="100602" level="14">
+    <if_sid>61607</if_sid>
+    <field name="win.eventdata.imageLoaded" type="pcre2">(?i)\\log\.dll$</field>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\BluetoothService\.exe$</field>
+    <mitre>
+      <id>T1574.002</id>
+    </mitre>
+    <group>chrysalis,defense_evasion,dll_sideload,critical,</group>
+    <description>Chrysalis: Malicious log.dll loaded by BluetoothService.exe</description>
+  </rule>
+
+  <!-- Chrysalis: TCC Code Execution -->
+  <rule id="100610" level="15">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)-nostdlib.*-run.*\.c</field>
+    <mitre>
+      <id>T1620</id>
+      <id>T1059</id>
+    </mitre>
+    <group>chrysalis,execution,tcc,critical,</group>
+    <description>Chrysalis: TCC (Tiny C Compiler) runtime code execution detected</description>
+  </rule>
+
+  <!-- Chrysalis: USOShared Directory Abuse -->
+  <rule id="100611" level="13">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\ProgramData\\USOShared\\svchost\.exe$</field>
+    <mitre>
+      <id>T1036</id>
+      <id>T1059</id>
+    </mitre>
+    <group>chrysalis,defense_evasion,masquerading,</group>
+    <description>Chrysalis: Fake svchost.exe executing from USOShared directory</description>
+  </rule>
+
+  <!-- Chrysalis: conf.c TCC Payload -->
+  <rule id="100612" level="14">
+    <if_sid>61601</if_sid>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)\\ProgramData\\USOShared\\conf\.c$</field>
+    <mitre>
+      <id>T1620</id>
+    </mitre>
+    <group>chrysalis,execution,tcc,</group>
+    <description>Chrysalis: TCC payload file (conf.c) created in USOShared</description>
+  </rule>
+
+  <!-- Chrysalis: C2 Domain Communication - skycloudcenter.com -->
+  <rule id="100620" level="15">
+    <if_sid>61605</if_sid>
+    <field name="win.eventdata.destinationHostname" type="pcre2">(?i)skycloudcenter\.com</field>
+    <mitre>
+      <id>T1071.001</id>
+      <id>T1573</id>
+    </mitre>
+    <group>chrysalis,c2,network,critical,</group>
+    <description>Chrysalis: C2 communication to skycloudcenter.com</description>
+  </rule>
+
+  <!-- Chrysalis: C2 Domain Communication - wiresguard.com -->
+  <rule id="100621" level="15">
+    <if_sid>61605</if_sid>
+    <field name="win.eventdata.destinationHostname" type="pcre2">(?i)wiresguard\.com</field>
+    <mitre>
+      <id>T1071.001</id>
+      <id>T1573</id>
+    </mitre>
+    <group>chrysalis,c2,network,critical,</group>
+    <description>Chrysalis: C2 communication to wiresguard.com</description>
+  </rule>
+
+  <!-- Chrysalis: C2 IP 95.179.213.0 -->
+  <rule id="100622" level="14">
+    <if_sid>61605</if_sid>
+    <field name="win.eventdata.destinationIp">^95\.179\.213\.0$</field>
+    <mitre>
+      <id>T1071.001</id>
+    </mitre>
+    <group>chrysalis,c2,network,</group>
+    <description>Chrysalis: Connection to known C2 IP 95.179.213.0</description>
+  </rule>
+
+  <!-- Chrysalis: C2 IP 61.4.102.97 -->
+  <rule id="100623" level="14">
+    <if_sid>61605</if_sid>
+    <field name="win.eventdata.destinationIp">^61\.4\.102\.97$</field>
+    <mitre>
+      <id>T1071.001</id>
+    </mitre>
+    <group>chrysalis,c2,network,</group>
+    <description>Chrysalis: Connection to known C2 IP 61.4.102.97</description>
+  </rule>
+
+  <!-- Chrysalis: C2 IP 59.110.7.32 -->
+  <rule id="100624" level="14">
+    <if_sid>61605</if_sid>
+    <field name="win.eventdata.destinationIp">^59\.110\.7\.32$</field>
+    <mitre>
+      <id>T1071.001</id>
+    </mitre>
+    <group>chrysalis,c2,network,</group>
+    <description>Chrysalis: Connection to known C2 IP 59.110.7.32</description>
+  </rule>
+
+  <!-- Chrysalis: C2 IP 124.222.137.114 -->
+  <rule id="100625" level="14">
+    <if_sid>61605</if_sid>
+    <field name="win.eventdata.destinationIp">^124\.222\.137\.114$</field>
+    <mitre>
+      <id>T1071.001</id>
+    </mitre>
+    <group>chrysalis,c2,network,</group>
+    <description>Chrysalis: Connection to known C2 IP 124.222.137.114</description>
+  </rule>
+
+  <!-- Chrysalis: Notepad++ Infection Chain -->
+  <rule id="100630" level="12">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.parentImage" type="pcre2">(?i)\\(notepad\+\+|GUP)\.exe$</field>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\(GUP|update)\.exe$</field>
+    <mitre>
+      <id>T1204.002</id>
+    </mitre>
+    <group>chrysalis,initial_access,execution,</group>
+    <description>Chrysalis: Suspicious process chain from Notepad++ (potential supply chain)</description>
+  </rule>
+
+  <!-- Chrysalis: Service Installation with -i Flag -->
+  <rule id="100640" level="12">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\sc\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)create.*binPath=.*-i</field>
+    <mitre>
+      <id>T1543.003</id>
+    </mitre>
+    <group>chrysalis,persistence,service,</group>
+    <description>Chrysalis: Service creation with launcher flag (-i)</description>
+  </rule>
+
+  <!-- Chrysalis: BluetoothService in Service Command -->
+  <rule id="100641" level="13">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\sc\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(create|config).*BluetoothService</field>
+    <field name="win.eventdata.commandLine" negate="yes" type="pcre2">(?i)Program Files</field>
+    <mitre>
+      <id>T1543.003</id>
+    </mitre>
+    <group>chrysalis,persistence,service,</group>
+    <description>Chrysalis: Service manipulation targeting BluetoothService</description>
+  </rule>
+
+  <!-- Chrysalis: Cleanup Batch File -->
+  <rule id="100650" level="10">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\cmd\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)\\Bluetooth\\u\.bat</field>
+    <mitre>
+      <id>T1070.004</id>
+    </mitre>
+    <group>chrysalis,defense_evasion,cleanup,</group>
+    <description>Chrysalis: Cleanup batch file (u.bat) execution</description>
+  </rule>
+
+  <!-- Chrysalis: libtcc.dll Loading -->
+  <rule id="100660" level="12">
+    <if_sid>61607</if_sid>
+    <field name="win.eventdata.imageLoaded" type="pcre2">(?i)\\libtcc\.dll$</field>
+    <field name="win.eventdata.imageLoaded" negate="yes" type="pcre2">(?i)\\(mingw|msys|cygwin|tcc)</field>
+    <mitre>
+      <id>T1620</id>
+    </mitre>
+    <group>chrysalis,execution,tcc,</group>
+    <description>Chrysalis: TCC library (libtcc.dll) loaded by suspicious process</description>
+  </rule>
+
+  <!-- Chrysalis: clipc.dll Abuse (Warbird) -->
+  <rule id="100661" level="13">
+    <if_sid>61607</if_sid>
+    <field name="win.eventdata.imageLoaded" type="pcre2">(?i)\\clipc\.dll$</field>
+    <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)^C:\\Windows\\(System32|SysWOW64)\\</field>
+    <mitre>
+      <id>T1055</id>
+      <id>T1620</id>
+    </mitre>
+    <group>chrysalis,defense_evasion,execution,</group>
+    <description>Chrysalis: Microsoft clipc.dll loaded by non-system process (Warbird abuse)</description>
+  </rule>
+
+</group>

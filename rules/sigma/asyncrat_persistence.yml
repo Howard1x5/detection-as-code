@@ -1,0 +1,122 @@
+title: AsyncRAT Persistence via Registry Run Key
+id: a1b2c3d4-5678-90ab-cdef-111111111111
+status: experimental
+description: |
+    Detects AsyncRAT persistence mechanisms via registry Run keys.
+    AsyncRAT commonly creates Run key entries pointing to executables
+    in user-writable directories like AppData, Temp, or Public folders.
+author: Clint Howard
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1547/001/
+    - https://malpedia.caad.fkie.fraunhofer.de/details/win.asyncrat
+tags:
+    - attack.persistence
+    - attack.t1547.001
+logsource:
+    category: registry_set
+    product: windows
+detection:
+    selection_key:
+        TargetObject|contains:
+            - '\Software\Microsoft\Windows\CurrentVersion\Run'
+            - '\Software\Microsoft\Windows\CurrentVersion\RunOnce'
+    selection_path:
+        Details|contains:
+            - '\AppData\Roaming\'
+            - '\AppData\Local\Temp\'
+            - '\Users\Public\'
+            - '\ProgramData\'
+            - '\Windows\Temp\'
+    filter_legitimate:
+        Details|contains:
+            - '\Microsoft\'
+            - '\Google\'
+            - '\Adobe\'
+            - '\Zoom\'
+    condition: selection_key and selection_path and not filter_legitimate
+falsepositives:
+    - Legitimate software installing to user directories
+    - Custom enterprise applications
+level: high
+---
+title: AsyncRAT Persistence via Scheduled Task
+id: a1b2c3d4-5678-90ab-cdef-222222222222
+status: experimental
+description: |
+    Detects AsyncRAT-style scheduled task creation for persistence.
+    AsyncRAT creates scheduled tasks that run at logon or system startup,
+    often targeting executables in user-writable directories.
+author: Clint Howard
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1053/005/
+    - https://malpedia.caad.fkie.fraunhofer.de/details/win.asyncrat
+tags:
+    - attack.persistence
+    - attack.execution
+    - attack.t1053.005
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_schtasks:
+        Image|endswith: '\schtasks.exe'
+        CommandLine|contains:
+            - '/create'
+            - '-create'
+    selection_trigger:
+        CommandLine|contains:
+            - 'onlogon'
+            - 'onstart'
+            - 'onidle'
+    selection_suspicious_path:
+        CommandLine|contains:
+            - '\AppData\'
+            - '\Users\Public\'
+            - '\Temp\'
+            - '\ProgramData\'
+    filter_legitimate:
+        CommandLine|contains:
+            - 'Microsoft'
+            - 'Windows Defender'
+            - 'GoogleUpdate'
+    condition: selection_schtasks and selection_trigger and selection_suspicious_path and not filter_legitimate
+falsepositives:
+    - Legitimate software using scheduled tasks for updates
+    - Administrative scripts creating tasks
+level: high
+---
+title: AsyncRAT Registry Persistence - Specific Patterns
+id: a1b2c3d4-5678-90ab-cdef-333333333333
+status: experimental
+description: |
+    Detects specific AsyncRAT naming patterns in registry persistence.
+    AsyncRAT often uses generic names like "Updater", "SystemUpdate",
+    "WindowsService" etc. pointing to suspicious locations.
+author: Clint Howard
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1547/001/
+tags:
+    - attack.persistence
+    - attack.t1547.001
+logsource:
+    category: registry_set
+    product: windows
+detection:
+    selection_key:
+        TargetObject|contains:
+            - '\Software\Microsoft\Windows\CurrentVersion\Run'
+    selection_suspicious_name:
+        TargetObject|endswith:
+            - '\Updater'
+            - '\SystemUpdate'
+            - '\WindowsService'
+            - '\svchost'
+            - '\RuntimeBroker'
+            - '\SecurityHealth'
+    condition: selection_key and selection_suspicious_name
+falsepositives:
+    - Very unlikely - these names combined with Run key are suspicious
+level: critical

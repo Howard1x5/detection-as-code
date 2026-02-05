@@ -1,0 +1,147 @@
+title: QakBot Regsvr32 DLL Execution
+id: q1001001-0001-4000-8000-000000000001
+status: experimental
+description: Detects QakBot execution via regsvr32 with suspicious DLL paths
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1218/010/
+    - https://attack.mitre.org/software/S0650/
+tags:
+    - attack.defense_evasion
+    - attack.t1218.010
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection:
+        Image|endswith: '\regsvr32.exe'
+    selection_args:
+        CommandLine|contains:
+            - '/s '
+            - '-s '
+            - '/i:'
+            - '-i:'
+    selection_path:
+        CommandLine|contains:
+            - '\Users\'
+            - '\AppData\'
+            - '\Downloads\'
+            - '\Temp\'
+            - '\ProgramData\'
+            - '.dat'
+            - '.tmp'
+            - '.ocx'
+    condition: selection and selection_args and selection_path
+falsepositives:
+    - Legitimate software registration
+level: high
+
+---
+title: QakBot Process Injection via Explorer
+id: q1001001-0002-4000-8000-000000000002
+status: experimental
+description: Detects QakBot injection into explorer.exe
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1055/
+tags:
+    - attack.defense_evasion
+    - attack.t1055
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection_parent:
+        ParentImage|endswith: '\explorer.exe'
+    selection_child:
+        Image|endswith:
+            - '\cmd.exe'
+            - '\powershell.exe'
+            - '\wscript.exe'
+            - '\cscript.exe'
+            - '\mshta.exe'
+    selection_recon:
+        CommandLine|contains:
+            - 'whoami'
+            - 'net view'
+            - 'ipconfig'
+            - 'netstat'
+            - 'arp -a'
+            - 'route print'
+            - 'net user'
+            - 'net group'
+    condition: selection_parent and selection_child and selection_recon
+falsepositives:
+    - Administrative scripts run from explorer
+level: medium
+
+---
+title: QakBot Discovery Commands
+id: q1001001-0003-4000-8000-000000000003
+status: experimental
+description: Detects QakBot reconnaissance command patterns
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1016/
+    - https://attack.mitre.org/techniques/T1057/
+tags:
+    - attack.discovery
+    - attack.t1016
+    - attack.t1057
+    - attack.t1082
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection_cmd:
+        Image|endswith:
+            - '\cmd.exe'
+            - '\powershell.exe'
+    selection_recon:
+        CommandLine|contains:
+            - 'whoami /all'
+            - 'net localgroup'
+            - 'net group /domain'
+            - 'nltest /dclist'
+            - 'nltest /domain_trusts'
+            - 'cmdkey /list'
+    condition: selection_cmd and selection_recon
+    timeframe: 5m
+falsepositives:
+    - Administrative activity
+level: medium
+
+---
+title: QakBot Scheduled Task Persistence
+id: q1001001-0004-4000-8000-000000000004
+status: experimental
+description: Detects QakBot persistence via scheduled tasks
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1053/005/
+tags:
+    - attack.persistence
+    - attack.t1053.005
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection:
+        Image|endswith: '\schtasks.exe'
+        CommandLine|contains: '/create'
+    selection_suspicious:
+        CommandLine|contains:
+            - 'regsvr32'
+            - 'rundll32'
+            - '\AppData\'
+            - '\Users\Public\'
+            - '.dat'
+            - '.tmp'
+    condition: selection and selection_suspicious
+falsepositives:
+    - Legitimate scheduled task creation
+level: high

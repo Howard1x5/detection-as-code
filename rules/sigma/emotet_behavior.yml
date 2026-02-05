@@ -1,0 +1,141 @@
+title: Emotet PowerShell Download Cradle
+id: e1001001-0001-4000-8000-000000000001
+status: experimental
+description: Detects Emotet-style PowerShell download cradle patterns
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1059/001/
+    - https://attack.mitre.org/software/S0367/
+tags:
+    - attack.execution
+    - attack.t1059.001
+    - attack.defense_evasion
+    - attack.t1027
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection_parent:
+        ParentImage|endswith:
+            - '\winword.exe'
+            - '\excel.exe'
+            - '\outlook.exe'
+            - '\mshta.exe'
+    selection_child:
+        Image|endswith: '\powershell.exe'
+    selection_cmdline:
+        CommandLine|contains:
+            - 'IEX'
+            - 'Invoke-Expression'
+            - 'DownloadString'
+            - 'WebClient'
+            - 'Net.WebClient'
+            - '-enc'
+            - '-e '
+            - 'FromBase64'
+    condition: selection_parent and selection_child and selection_cmdline
+falsepositives:
+    - Legitimate administrative scripts from Office
+level: high
+
+---
+title: Emotet Rundll32 Execution Pattern
+id: e1001001-0002-4000-8000-000000000002
+status: experimental
+description: Detects Emotet execution via rundll32 with suspicious arguments
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1218/011/
+tags:
+    - attack.defense_evasion
+    - attack.t1218.011
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection_rundll:
+        Image|endswith: '\rundll32.exe'
+    selection_args:
+        CommandLine|contains:
+            - ',Control_RunDLL'
+            - ',DllRegisterServer'
+            - '#1'
+            - ',#'
+    selection_path:
+        CommandLine|contains:
+            - '\AppData\Local\Temp\'
+            - '\Users\Public\'
+            - '\ProgramData\'
+            - '%TEMP%'
+            - '%APPDATA%'
+    condition: selection_rundll and selection_args and selection_path
+falsepositives:
+    - Legitimate software installations
+level: high
+
+---
+title: Emotet Service Installation
+id: e1001001-0003-4000-8000-000000000003
+status: experimental
+description: Detects Emotet persistence via service installation
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1543/003/
+tags:
+    - attack.persistence
+    - attack.t1543.003
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection_sc:
+        Image|endswith: '\sc.exe'
+        CommandLine|contains: 'create'
+    selection_suspicious:
+        CommandLine|contains:
+            - 'binPath='
+            - 'start= auto'
+    selection_path:
+        CommandLine|contains:
+            - '\AppData\'
+            - '\ProgramData\'
+            - '\Users\Public\'
+            - 'rundll32'
+    condition: selection_sc and selection_suspicious and selection_path
+falsepositives:
+    - Legitimate service installations
+level: high
+
+---
+title: Emotet Registry Persistence
+id: e1001001-0004-4000-8000-000000000004
+status: experimental
+description: Detects Emotet registry-based persistence mechanisms
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1547/001/
+tags:
+    - attack.persistence
+    - attack.t1547.001
+logsource:
+    product: windows
+    category: registry_set
+detection:
+    selection_keys:
+        TargetObject|contains:
+            - '\SOFTWARE\Microsoft\Windows\CurrentVersion\Run'
+            - '\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce'
+    selection_value:
+        Details|contains:
+            - 'rundll32'
+            - '.dll'
+            - '\AppData\'
+            - '\ProgramData\'
+    condition: selection_keys and selection_value
+falsepositives:
+    - Legitimate software auto-start entries
+level: medium

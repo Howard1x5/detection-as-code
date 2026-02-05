@@ -1,0 +1,194 @@
+{
+  "name": "Wazuh Alert Enrichment v2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wazuh-alerts",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "id": "webhook-trigger",
+      "name": "Wazuh Webhook",
+      "webhookId": "wazuh-alerts"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract relevant fields from Wazuh alert\nconst alert = $input.first().json;\n\n// Handle both direct alert and nested body\nconst data = alert.body || alert;\n\nlet extracted = {\n  timestamp: data.timestamp || new Date().toISOString(),\n  rule_id: data.rule?.id || 'unknown',\n  rule_level: data.rule?.level || 0,\n  rule_description: data.rule?.description || 'No description',\n  mitre_ids: data.rule?.mitre?.id || [],\n  mitre_tactics: data.rule?.mitre?.tactic || [],\n  agent_name: data.agent?.name || 'unknown',\n  agent_ip: data.agent?.ip || 'unknown',\n  manager: data.manager?.name || 'unknown',\n  hash_sha256: null,\n  hash_md5: null,\n  source_ip: null,\n  dest_ip: null,\n  dest_port: null,\n  process_name: null,\n  command_line: null,\n  groups: data.rule?.groups || [],\n  vt_found: false,\n  vt_malicious: 0,\n  vt_threat_score: 0\n};\n\n// Extract from Sysmon eventdata if present\nif (data.data?.win?.eventdata) {\n  const ed = data.data.win.eventdata;\n  \n  // Extract hashes (Sysmon format: SHA256=xxx,MD5=yyy)\n  if (ed.hashes) {\n    const hashMatch = ed.hashes.match(/SHA256=([A-Fa-f0-9]{64})/);\n    if (hashMatch) extracted.hash_sha256 = hashMatch[1];\n    const md5Match = ed.hashes.match(/MD5=([A-Fa-f0-9]{32})/);\n    if (md5Match) extracted.hash_md5 = md5Match[1];\n  }\n  \n  // Network info\n  if (ed.destinationIp) extracted.dest_ip = ed.destinationIp;\n  if (ed.destinationPort) extracted.dest_port = ed.destinationPort;\n  if (ed.sourceIp) extracted.source_ip = ed.sourceIp;\n  \n  // Process info\n  if (ed.image) extracted.process_name = ed.image;\n  if (ed.commandLine) extracted.command_line = ed.commandLine;\n}\n\n// Determine severity based on rule level\nif (extracted.rule_level >= 14) {\n  extracted.severity = 'CRITICAL';\n} else if (extracted.rule_level >= 12) {\n  extracted.severity = 'HIGH';\n} else if (extracted.rule_level >= 10) {\n  extracted.severity = 'MEDIUM';\n} else {\n  extracted.severity = 'LOW';\n}\n\n// Check if this is an AsyncRAT detection\nextracted.is_asyncrat = extracted.groups.includes('asyncrat');\n\nreturn extracted;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "id": "extract-iocs",
+      "name": "Extract IOCs"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "check-hash",
+              "leftValue": "={{ $json.hash_sha256 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [440, 0],
+      "id": "check-hash-exists",
+      "name": "Has SHA256?"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.virustotal.com/api/v3/files/{{ $json.hash_sha256 }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [660, -100],
+      "id": "vt-file-lookup",
+      "name": "VirusTotal File Lookup",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "virustotal-api",
+          "name": "VirusTotal API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process VirusTotal response and combine with alert data\nconst alert = $('Extract IOCs').first().json;\nconst vtResponse = $input.first().json;\n\nlet enriched = { ...alert };\n\nif (vtResponse.data?.attributes) {\n  const stats = vtResponse.data.attributes.last_analysis_stats;\n  enriched.vt_malicious = stats.malicious || 0;\n  enriched.vt_suspicious = stats.suspicious || 0;\n  enriched.vt_harmless = stats.harmless || 0;\n  enriched.vt_undetected = stats.undetected || 0;\n  \n  // Calculate threat score\n  const total = enriched.vt_malicious + enriched.vt_suspicious + enriched.vt_harmless + enriched.vt_undetected;\n  enriched.vt_threat_score = total > 0 ? Math.round(((enriched.vt_malicious * 100) + (enriched.vt_suspicious * 50)) / total) : 0;\n  \n  // Get file names/tags\n  enriched.vt_names = vtResponse.data.attributes.names?.slice(0, 3) || [];\n  enriched.vt_tags = vtResponse.data.attributes.tags || [];\n  enriched.vt_found = true;\n  \n  // Upgrade severity if VT shows high malicious count\n  if (enriched.vt_malicious >= 10 && enriched.severity !== 'CRITICAL') {\n    enriched.severity = 'CRITICAL';\n    enriched.severity_upgraded = true;\n  }\n} else {\n  enriched.vt_found = false;\n  enriched.vt_malicious = 0;\n  enriched.vt_threat_score = 0;\n}\n\nreturn enriched;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, -100],
+      "id": "process-vt-response",
+      "name": "Process VT Response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "check-severity",
+              "leftValue": "={{ $json.severity }}",
+              "rightValue": "CRITICAL",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1100, 0],
+      "id": "check-critical",
+      "name": "Is Critical?"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=:rotating_light: **CRITICAL SECURITY ALERT** :rotating_light:\n\n**Rule:** {{ $json.rule_id }} - {{ $json.rule_description }}\n**Severity:** {{ $json.severity }}\n**Agent:** {{ $json.agent_name }} ({{ $json.agent_ip }})\n**Time:** {{ $json.timestamp }}\n\n**MITRE ATT&CK:** {{ $json.mitre_ids.join(', ') || 'N/A' }}\n**Tactics:** {{ $json.mitre_tactics.join(', ') || 'N/A' }}\n\n{{ $json.hash_sha256 ? '**SHA256:** `' + $json.hash_sha256 + '`' : '' }}\n{{ $json.vt_found ? '**VirusTotal:** ' + $json.vt_malicious + ' malicious detections (Score: ' + $json.vt_threat_score + '/100)' : '' }}\n{{ $json.process_name ? '**Process:** ' + $json.process_name : '' }}\n{{ $json.command_line ? '**Command:** `' + $json.command_line.substring(0, 200) + '`' : '' }}\n\n**Groups:** {{ $json.groups.join(', ') || 'N/A' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [1320, -100],
+      "id": "discord-critical",
+      "name": "Discord Critical Alert",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "discord-webhook",
+          "name": "Discord Webhook"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=:warning: **Security Alert**\n\n**Rule:** {{ $json.rule_id }} - {{ $json.rule_description }}\n**Severity:** {{ $json.severity }}\n**Agent:** {{ $json.agent_name }}\n**MITRE:** {{ $json.mitre_ids.join(', ') || 'N/A' }}\n{{ $json.vt_found ? '**VT Detections:** ' + $json.vt_malicious : '' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [1320, 100],
+      "id": "discord-normal",
+      "name": "Discord Normal Alert",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "discord-webhook",
+          "name": "Discord Webhook"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Wazuh Webhook": {
+      "main": [[{"node": "Extract IOCs", "type": "main", "index": 0}]]
+    },
+    "Extract IOCs": {
+      "main": [[{"node": "Has SHA256?", "type": "main", "index": 0}]]
+    },
+    "Has SHA256?": {
+      "main": [
+        [{"node": "VirusTotal File Lookup", "type": "main", "index": 0}],
+        [{"node": "Is Critical?", "type": "main", "index": 0}]
+      ]
+    },
+    "VirusTotal File Lookup": {
+      "main": [[{"node": "Process VT Response", "type": "main", "index": 0}]]
+    },
+    "Process VT Response": {
+      "main": [[{"node": "Is Critical?", "type": "main", "index": 0}]]
+    },
+    "Is Critical?": {
+      "main": [
+        [{"node": "Discord Critical Alert", "type": "main", "index": 0}],
+        [{"node": "Discord Normal Alert", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

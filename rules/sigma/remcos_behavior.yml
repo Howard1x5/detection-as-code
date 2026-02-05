@@ -1,0 +1,173 @@
+title: Remcos RAT Registry Persistence
+id: r1001001-0001-4000-8000-000000000001
+status: experimental
+description: Detects Remcos RAT registry persistence mechanisms
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1547/001/
+    - https://attack.mitre.org/software/S0332/
+tags:
+    - attack.persistence
+    - attack.t1547.001
+logsource:
+    product: windows
+    category: registry_set
+detection:
+    selection_keys:
+        TargetObject|contains:
+            - '\SOFTWARE\Microsoft\Windows\CurrentVersion\Run'
+            - '\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce'
+            - '\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run'
+    selection_suspicious:
+        TargetObject|endswith:
+            - '\Remcos'
+            - '\Windows Update'
+            - '\Microsoft Update'
+            - '\System Update'
+    condition: selection_keys and selection_suspicious
+falsepositives:
+    - Legitimate software named similarly
+level: high
+
+---
+title: Remcos RAT Keylogger Activity
+id: r1001001-0002-4000-8000-000000000002
+status: experimental
+description: Detects Remcos RAT keylogger file creation patterns
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1056/001/
+tags:
+    - attack.collection
+    - attack.t1056.001
+logsource:
+    product: windows
+    category: file_event
+detection:
+    selection:
+        TargetFilename|contains:
+            - '\AppData\Roaming\'
+            - '\AppData\Local\Temp\'
+    selection_filename:
+        TargetFilename|endswith:
+            - '\logs.dat'
+            - '\keylog.dat'
+            - '\keylog.txt'
+            - '\logs.txt'
+            - '.rmc'
+    condition: selection and selection_filename
+falsepositives:
+    - Other legitimate software using similar naming
+level: high
+
+---
+title: Remcos RAT Network Connection
+id: r1001001-0003-4000-8000-000000000003
+status: experimental
+description: Detects Remcos RAT typical C2 port connections
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1071/001/
+tags:
+    - attack.command_and_control
+    - attack.t1071.001
+logsource:
+    product: windows
+    category: network_connection
+detection:
+    selection_ports:
+        DestinationPort:
+            - 2404
+            - 2405
+            - 2406
+            - 4782
+            - 5552
+            - 8080
+            - 9034
+    selection_process:
+        Image|endswith:
+            - '\svchost.exe'
+            - '\explorer.exe'
+            - '\regasm.exe'
+            - '\msbuild.exe'
+            - '\installutil.exe'
+    filter_legitimate:
+        DestinationIp|startswith:
+            - '10.'
+            - '172.16.'
+            - '192.168.'
+            - '127.'
+    condition: selection_ports and selection_process and not filter_legitimate
+falsepositives:
+    - Legitimate applications using these ports
+level: medium
+
+---
+title: Remcos RAT Process Hollowing
+id: r1001001-0004-4000-8000-000000000004
+status: experimental
+description: Detects Remcos RAT process hollowing into legitimate processes
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1055/012/
+tags:
+    - attack.defense_evasion
+    - attack.t1055.012
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    selection_target:
+        Image|endswith:
+            - '\regasm.exe'
+            - '\msbuild.exe'
+            - '\installutil.exe'
+            - '\regsvcs.exe'
+    selection_unusual_parent:
+        ParentImage|endswith:
+            - '\cmd.exe'
+            - '\powershell.exe'
+            - '\wscript.exe'
+            - '\cscript.exe'
+    filter_legitimate:
+        ParentImage|contains:
+            - '\Visual Studio\'
+            - '\MSBuild\'
+    condition: selection_target and selection_unusual_parent and not filter_legitimate
+falsepositives:
+    - Development activities
+level: high
+
+---
+title: Remcos RAT Mutex Creation
+id: r1001001-0005-4000-8000-000000000005
+status: experimental
+description: Detects Remcos RAT via characteristic mutex patterns
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1480/
+tags:
+    - attack.defense_evasion
+    - attack.t1480
+logsource:
+    product: windows
+    category: create_remote_thread
+detection:
+    selection:
+        TargetImage|endswith:
+            - '\explorer.exe'
+            - '\svchost.exe'
+            - '\regasm.exe'
+    filter_system:
+        SourceImage|endswith:
+            - '\csrss.exe'
+            - '\services.exe'
+    condition: selection and not filter_system
+falsepositives:
+    - Security software
+level: medium

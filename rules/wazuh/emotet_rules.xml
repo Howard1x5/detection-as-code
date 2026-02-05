@@ -1,0 +1,84 @@
+<!-- Emotet Detection Rules -->
+<!-- Loader/Dropper known for PowerShell cradles and rundll32 execution -->
+<!-- MITRE ATT&CK: T1059.001, T1218.011, T1547.001, T1055 -->
+
+<group name="emotet,malware,loader,">
+
+  <!-- Emotet: PowerShell download cradle from Office -->
+  <rule id="100210" level="14">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.parentImage" type="pcre2">(?i)(winword|excel|outlook|mshta)\.exe$</field>
+    <field name="win.eventdata.image" type="pcre2">(?i)powershell\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(IEX|Invoke-Expression|DownloadString|WebClient|Net\.WebClient|-enc|-e\s|FromBase64)</field>
+    <mitre>
+      <id>T1059.001</id>
+      <id>T1566.001</id>
+    </mitre>
+    <group>emotet,execution,defense_evasion,</group>
+    <description>Emotet: PowerShell download cradle spawned from Office application</description>
+  </rule>
+
+  <!-- Emotet: Rundll32 suspicious execution -->
+  <rule id="100211" level="12">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)rundll32\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(Control_RunDLL|DllRegisterServer|#1|,#)</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(\\AppData\\|\\Users\\Public\\|\\ProgramData\\|%TEMP%|%APPDATA%|\.tmp|\.dat)</field>
+    <mitre>
+      <id>T1218.011</id>
+    </mitre>
+    <group>emotet,defense_evasion,</group>
+    <description>Emotet: Rundll32 execution with suspicious DLL path</description>
+  </rule>
+
+  <!-- Emotet: Service installation for persistence -->
+  <rule id="100212" level="12">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)sc\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)create</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(binPath=.*rundll32|\\AppData\\|\\ProgramData\\|\\Users\\Public\\)</field>
+    <mitre>
+      <id>T1543.003</id>
+    </mitre>
+    <group>emotet,persistence,</group>
+    <description>Emotet: Service creation for persistence</description>
+  </rule>
+
+  <!-- Emotet: Registry Run key persistence -->
+  <rule id="100213" level="10">
+    <if_sid>61615</if_sid>
+    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\CurrentVersion\\Run</field>
+    <field name="win.eventdata.details" type="pcre2">(?i)(rundll32|\.dll|\\AppData\\|\\ProgramData\\)</field>
+    <mitre>
+      <id>T1547.001</id>
+    </mitre>
+    <group>emotet,persistence,</group>
+    <description>Emotet: Registry Run key persistence with suspicious value</description>
+  </rule>
+
+  <!-- Emotet: MSHTA execution -->
+  <rule id="100214" level="12">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)mshta\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(http|javascript:|vbscript:|about:)</field>
+    <mitre>
+      <id>T1218.005</id>
+    </mitre>
+    <group>emotet,defense_evasion,</group>
+    <description>Emotet: MSHTA execution with suspicious content</description>
+  </rule>
+
+  <!-- Emotet: WMI spawning PowerShell -->
+  <rule id="100215" level="12">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.parentImage" type="pcre2">(?i)wmiprvse\.exe$</field>
+    <field name="win.eventdata.image" type="pcre2">(?i)(powershell|cmd)\.exe$</field>
+    <mitre>
+      <id>T1047</id>
+      <id>T1059.001</id>
+    </mitre>
+    <group>emotet,execution,</group>
+    <description>Emotet: WMI spawning command interpreter</description>
+  </rule>
+
+</group>

@@ -1,0 +1,185 @@
+title: LokiBot Credential Store Access
+id: l1001001-0001-4000-8000-000000000001
+status: experimental
+description: Detects LokiBot accessing browser credential stores
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1555/003/
+    - https://attack.mitre.org/software/S0447/
+tags:
+    - attack.credential_access
+    - attack.t1555.003
+logsource:
+    product: windows
+    category: file_access
+detection:
+    selection_chrome:
+        TargetFilename|contains: '\Google\Chrome\User Data'
+        TargetFilename|endswith:
+            - '\Login Data'
+            - '\Cookies'
+            - '\Web Data'
+    selection_firefox:
+        TargetFilename|contains: '\Mozilla\Firefox\Profiles'
+        TargetFilename|endswith:
+            - '\logins.json'
+            - '\cookies.sqlite'
+            - '\key4.db'
+    selection_opera:
+        TargetFilename|contains: '\Opera Software'
+        TargetFilename|endswith: '\Login Data'
+    filter_browsers:
+        Image|endswith:
+            - '\chrome.exe'
+            - '\firefox.exe'
+            - '\opera.exe'
+            - '\msedge.exe'
+    condition: (selection_chrome or selection_firefox or selection_opera) and not filter_browsers
+falsepositives:
+    - Password managers
+    - Browser sync utilities
+level: high
+
+---
+title: LokiBot HTTP POST Exfiltration
+id: l1001001-0002-4000-8000-000000000002
+status: experimental
+description: Detects LokiBot-style HTTP POST data exfiltration
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1041/
+tags:
+    - attack.exfiltration
+    - attack.t1041
+logsource:
+    product: windows
+    category: network_connection
+detection:
+    selection_process:
+        Image|endswith:
+            - '\svchost.exe'
+            - '\explorer.exe'
+            - '\regasm.exe'
+    selection_ports:
+        DestinationPort:
+            - 80
+            - 443
+            - 8080
+    selection_dest:
+        Initiated: 'true'
+    filter_microsoft:
+        DestinationHostname|endswith:
+            - '.microsoft.com'
+            - '.windows.com'
+            - '.windowsupdate.com'
+    condition: selection_process and selection_ports and selection_dest and not filter_microsoft
+falsepositives:
+    - Legitimate web traffic from system processes
+level: low
+
+---
+title: LokiBot Cryptocurrency Wallet Access
+id: l1001001-0003-4000-8000-000000000003
+status: experimental
+description: Detects access to cryptocurrency wallet files
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1539/
+tags:
+    - attack.credential_access
+    - attack.t1539
+logsource:
+    product: windows
+    category: file_access
+detection:
+    selection_wallets:
+        TargetFilename|contains:
+            - '\Electrum\wallets\'
+            - '\Ethereum\keystore\'
+            - '\Bitcoin\wallets\'
+            - '\Litecoin\wallets\'
+            - '\Exodus\'
+            - '\Jaxx\'
+            - '\Atomic\'
+    selection_files:
+        TargetFilename|endswith:
+            - 'wallet.dat'
+            - '.wallet'
+            - 'default_wallet'
+    filter_legitimate:
+        Image|contains:
+            - '\Electrum\'
+            - '\Bitcoin\'
+            - '\Ethereum\'
+            - '\Exodus\'
+    condition: (selection_wallets or selection_files) and not filter_legitimate
+falsepositives:
+    - Wallet backup utilities
+level: critical
+
+---
+title: LokiBot FTP Client Credential Access
+id: l1001001-0004-4000-8000-000000000004
+status: experimental
+description: Detects access to FTP client credential files
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1555/
+tags:
+    - attack.credential_access
+    - attack.t1555
+logsource:
+    product: windows
+    category: file_access
+detection:
+    selection_filezilla:
+        TargetFilename|contains: '\FileZilla'
+        TargetFilename|endswith:
+            - '\recentservers.xml'
+            - '\sitemanager.xml'
+    selection_winscp:
+        TargetFilename|contains: '\WinSCP'
+        TargetFilename|endswith: '\WinSCP.ini'
+    selection_coreftp:
+        TargetFilename|contains: '\CoreFTP'
+    filter_legitimate:
+        Image|endswith:
+            - '\filezilla.exe'
+            - '\WinSCP.exe'
+            - '\coreftp.exe'
+    condition: (selection_filezilla or selection_winscp or selection_coreftp) and not filter_legitimate
+falsepositives:
+    - FTP client migrations
+level: high
+
+---
+title: LokiBot Registry Persistence
+id: l1001001-0005-4000-8000-000000000005
+status: experimental
+description: Detects LokiBot typical registry persistence locations
+author: Detection Pipeline
+date: 2026/02/05
+references:
+    - https://attack.mitre.org/techniques/T1547/001/
+tags:
+    - attack.persistence
+    - attack.t1547.001
+logsource:
+    product: windows
+    category: registry_set
+detection:
+    selection_run:
+        TargetObject|contains:
+            - '\SOFTWARE\Microsoft\Windows\CurrentVersion\Run'
+            - '\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce'
+    selection_hidden:
+        TargetObject|contains: '\AppData\Roaming\Microsoft\'
+        Details|contains: '.exe'
+    condition: selection_run and selection_hidden
+falsepositives:
+    - Legitimate software in user profile
+level: medium
