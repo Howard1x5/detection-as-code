@@ -9,7 +9,7 @@
     <if_sid>61603</if_sid>
     <field name="win.eventdata.image" type="pcre2">(?i)regsvr32\.exe$</field>
     <field name="win.eventdata.commandLine" type="pcre2">(?i)(/s|-s|/i:|-i:)</field>
-    <field name="win.eventdata.commandLine" type="pcre2">(?i)(\\Users\\|\\AppData\\|\\Downloads\\|\\Temp\\|\.dat|\.tmp|\.ocx)</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(\\+Users\\+|\\+AppData\\+|\\+Downloads\\+|\\+Temp\\+|\.dat|\.tmp|\.ocx)</field>
     <mitre>
       <id>T1218.010</id>
     </mitre>
@@ -49,7 +49,7 @@
     <if_sid>61603</if_sid>
     <field name="win.eventdata.image" type="pcre2">(?i)schtasks\.exe$</field>
     <field name="win.eventdata.commandLine" type="pcre2">(?i)/create</field>
-    <field name="win.eventdata.commandLine" type="pcre2">(?i)(regsvr32|rundll32|\\AppData\\|\\Users\\Public\\|\.dat|\.tmp)</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(regsvr32|rundll32|\\+AppData\\+|\\+Users\\+Public\\+|\.dat|\.tmp)</field>
     <mitre>
       <id>T1053.005</id>
     </mitre>

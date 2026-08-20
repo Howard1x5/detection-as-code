@@ -7,7 +7,7 @@
   <!-- Remcos: Registry persistence -->
   <rule id="100410" level="12">
     <if_sid>61615</if_sid>
-    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\CurrentVersion\\Run</field>
+    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\+CurrentVersion\\+Run</field>
     <field name="win.eventdata.targetObject" type="pcre2">(?i)(Remcos|Windows\sUpdate|Microsoft\sUpdate|System\sUpdate)$</field>
     <mitre>
       <id>T1547.001</id>
@@ -19,7 +19,7 @@
   <!-- Remcos: Keylogger file creation -->
   <rule id="100411" level="12">
     <if_sid>61601</if_sid>
-    <field name="win.eventdata.targetFilename" type="pcre2">(?i)\\AppData\\(Roaming|Local\\Temp)\\</field>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)\\+AppData\\+(Roaming|Local\\+Temp)\\+</field>
     <field name="win.eventdata.targetFilename" type="pcre2">(?i)(logs\.dat|keylog\.dat|keylog\.txt|logs\.txt|\.rmc)$</field>
     <mitre>
       <id>T1056.001</id>
@@ -69,7 +69,7 @@
   <!-- Remcos: Screenshot capture indicator -->
   <rule id="100415" level="8">
     <if_sid>61601</if_sid>
-    <field name="win.eventdata.targetFilename" type="pcre2">(?i)\\AppData\\</field>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)\\+AppData\\+</field>
     <field name="win.eventdata.targetFilename" type="pcre2">(?i)(screenshot|capture|screen).*\.(jpg|png|bmp)$</field>
     <mitre>
       <id>T1113</id>

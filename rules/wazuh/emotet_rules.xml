@@ -23,7 +23,7 @@
     <if_sid>61603</if_sid>
     <field name="win.eventdata.image" type="pcre2">(?i)rundll32\.exe$</field>
     <field name="win.eventdata.commandLine" type="pcre2">(?i)(Control_RunDLL|DllRegisterServer|#1|,#)</field>
-    <field name="win.eventdata.commandLine" type="pcre2">(?i)(\\AppData\\|\\Users\\Public\\|\\ProgramData\\|%TEMP%|%APPDATA%|\.tmp|\.dat)</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(\\+AppData\\+|\\+Users\\+Public\\+|\\+ProgramData\\+|%TEMP%|%APPDATA%|\.tmp|\.dat)</field>
     <mitre>
       <id>T1218.011</id>
     </mitre>
@@ -36,7 +36,7 @@
     <if_sid>61603</if_sid>
     <field name="win.eventdata.image" type="pcre2">(?i)sc\.exe$</field>
     <field name="win.eventdata.commandLine" type="pcre2">(?i)create</field>
-    <field name="win.eventdata.commandLine" type="pcre2">(?i)(binPath=.*rundll32|\\AppData\\|\\ProgramData\\|\\Users\\Public\\)</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(binPath=.*rundll32|\\+AppData\\+|\\+ProgramData\\+|\\+Users\\+Public\\+)</field>
     <mitre>
       <id>T1543.003</id>
     </mitre>
@@ -47,8 +47,8 @@
   <!-- Emotet: Registry Run key persistence -->
   <rule id="100213" level="10">
     <if_sid>61615</if_sid>
-    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\CurrentVersion\\Run</field>
-    <field name="win.eventdata.details" type="pcre2">(?i)(rundll32|\.dll|\\AppData\\|\\ProgramData\\)</field>
+    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\+CurrentVersion\\+Run</field>
+    <field name="win.eventdata.details" type="pcre2">(?i)(rundll32|\.dll|\\+AppData\\+|\\+ProgramData\\+)</field>
     <mitre>
       <id>T1547.001</id>
     </mitre>

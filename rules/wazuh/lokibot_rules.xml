@@ -7,7 +7,7 @@
   <!-- LokiBot: Browser credential store access -->
   <rule id="100510" level="12">
     <if_sid>61601</if_sid>
-    <field name="win.eventdata.targetFilename" type="pcre2">(?i)\\Google\\Chrome\\User\sData\\.*\\(Login\sData|Cookies|Web\sData)$</field>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)\\+Google\\+Chrome\\+User\sData\\+.*\\+(Login\sData|Cookies|Web\sData)$</field>
     <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)chrome\.exe$</field>
     <mitre>
       <id>T1555.003</id>
@@ -19,7 +19,7 @@
   <!-- LokiBot: Firefox credential access -->
   <rule id="100511" level="12">
     <if_sid>61601</if_sid>
-    <field name="win.eventdata.targetFilename" type="pcre2">(?i)\\Mozilla\\Firefox\\Profiles\\.*\\(logins\.json|cookies\.sqlite|key4\.db)$</field>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)\\+Mozilla\\+Firefox\\+Profiles\\+.*\\+(logins\.json|cookies\.sqlite|key4\.db)$</field>
     <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)firefox\.exe$</field>
     <mitre>
       <id>T1555.003</id>
@@ -31,7 +31,7 @@
   <!-- LokiBot: Cryptocurrency wallet access -->
   <rule id="100512" level="14">
     <if_sid>61601</if_sid>
-    <field name="win.eventdata.targetFilename" type="pcre2">(?i)(\\Electrum\\wallets\\|\\Ethereum\\keystore\\|\\Bitcoin\\wallets\\|wallet\.dat)</field>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)(\\+Electrum\\+wallets\\+|\\+Ethereum\\+keystore\\+|\\+Bitcoin\\+wallets\\+|wallet\.dat)</field>
     <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)(electrum|bitcoin|ethereum|exodus)\.exe$</field>
     <mitre>
       <id>T1539</id>
@@ -43,7 +43,7 @@
   <!-- LokiBot: FTP client credential theft -->
   <rule id="100513" level="11">
     <if_sid>61601</if_sid>
-    <field name="win.eventdata.targetFilename" type="pcre2">(?i)(\\FileZilla\\(recentservers|sitemanager)\.xml|\\WinSCP\\WinSCP\.ini|\\CoreFTP\\)</field>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)(\\+FileZilla\\+(recentservers|sitemanager)\.xml|\\+WinSCP\\+WinSCP\.ini|\\+CoreFTP\\+)</field>
     <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)(filezilla|winscp|coreftp)\.exe$</field>
     <mitre>
       <id>T1555</id>
@@ -55,7 +55,7 @@
   <!-- LokiBot: Email client credential theft -->
   <rule id="100514" level="11">
     <if_sid>61601</if_sid>
-    <field name="win.eventdata.targetFilename" type="pcre2">(?i)(\\Thunderbird\\Profiles\\|\\Microsoft\\Outlook\\)</field>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)(\\+Thunderbird\\+Profiles\\+|\\+Microsoft\\+Outlook\\+)</field>
     <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)(thunderbird|outlook)\.exe$</field>
     <mitre>
       <id>T1555.003</id>
@@ -67,8 +67,8 @@
   <!-- LokiBot: Registry persistence -->
   <rule id="100515" level="10">
     <if_sid>61615</if_sid>
-    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\CurrentVersion\\Run</field>
-    <field name="win.eventdata.details" type="pcre2">(?i)\\AppData\\Roaming\\Microsoft\\.*\.exe$</field>
+    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\+CurrentVersion\\+Run</field>
+    <field name="win.eventdata.details" type="pcre2">(?i)\\+AppData\\+Roaming\\+Microsoft\\+.*\.exe$</field>
     <mitre>
       <id>T1547.001</id>
     </mitre>
@@ -92,7 +92,7 @@
   <!-- LokiBot: Steam credentials theft -->
   <rule id="100517" level="10">
     <if_sid>61601</if_sid>
-    <field name="win.eventdata.targetFilename" type="pcre2">(?i)\\Steam\\config\\(loginusers\.vdf|config\.vdf)</field>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)\\+Steam\\+config\\+(loginusers\.vdf|config\.vdf)</field>
     <field name="win.eventdata.image" negate="yes" type="pcre2">(?i)steam\.exe$</field>
     <mitre>
       <id>T1555</id>
