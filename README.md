@@ -200,7 +200,9 @@ detection:
 - [Sigma Rules](https://github.com/SigmaHQ/sigma)
 - [YARA Documentation](https://yara.readthedocs.io/)
 
-## Roadmap: SOC Pipeline Integration
+## SOC Pipeline Integration -- Implemented
+
+**Status: stages 1->2 are real and tested; stage 2->3 is wired and documented, not yet executed end-to-end.** [Pipeline code](https://github.com/Howard1x5/triage-localLLM/tree/main/pipeline).
 
 Planned integration path for these detections beyond standalone rule development:
 
