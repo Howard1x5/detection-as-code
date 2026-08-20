@@ -26,10 +26,16 @@
   <!-- ============================================ -->
 
   <!-- AsyncRAT Registry Persistence - Suspicious Path -->
+  <!--
+    Chains off built-in rule 92300 (Sysmon EID13 Run-key write, level 0).
+    Wazuh matches 92300 first and only descends into ITS children, so a rule
+    using <if_sid>61615</if_sid> is shadowed and never evaluates.
+    Backslashes: the windows_eventchannel decoder emits DOUBLED backslashes,
+    so \\+ (one-or-more) is used rather than \\ (exactly one).
+  -->
   <rule id="100100" level="12">
-    <if_sid>61615</if_sid>
-    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\Software\\Microsoft\\Windows\\CurrentVersion\\Run</field>
-    <field name="win.eventdata.details" type="pcre2">(?i)(\\AppData\\|\\Users\\Public\\|\\ProgramData\\|\\Windows\\Temp\\)</field>
+    <if_sid>92300</if_sid>
+    <field name="win.eventdata.details" type="pcre2">(?i)(\\+AppData\\+|\\+Users\\+Public\\+|\\+ProgramData\\+|\\+Windows\\+Temp\\+)</field>
     <description>AsyncRAT: Registry Run key persistence pointing to suspicious directory</description>
     <mitre>
       <id>T1547.001</id>
@@ -39,8 +45,8 @@
 
   <!-- AsyncRAT Registry Persistence - Specific Naming Pattern -->
   <rule id="100101" level="14">
-    <if_sid>61615</if_sid>
-    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\CurrentVersion\\Run\\(Updater|SystemUpdate|WindowsService|svchost|RuntimeBroker|SecurityHealth)$</field>
+    <if_sid>92300</if_sid>
+    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\+Run\\+(Updater|SystemUpdate|WindowsService|svchost|RuntimeBroker|SecurityHealth)$</field>
     <description>AsyncRAT: Registry persistence with suspicious value name matching RAT patterns</description>
     <mitre>
       <id>T1547.001</id>
